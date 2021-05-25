@@ -87,6 +87,8 @@ export default {
       this.snackbar = false;
 
       const closest = this.mkad.geometry.getClosest(points).position;
+      let autoRoutLength;
+
       this.planeRout = [points, closest];
 
       this.ymaps
@@ -106,17 +108,16 @@ export default {
             }
 
             this.autoRout = routeCoords;
+            autoRoutLength = route.getLength();
           },
           error => {
             console.log(`Возникла ошибка: ${error.message}`);
           }
         );
-
       this.ymaps.geocode(points).then(res => {
-        // Выведем в консоль данные, полученные в результате геокодирования объекта.
         this.snackbarMsg = `
         ${res.geoObjects.get(0).properties.get('balloonContent')}<b>Расстоянние на автомобиле</b>:
-        км`;
+        ${(autoRoutLength / 1000).toFixed(2)}км`;
       });
       this.snackbar = true;
     }
