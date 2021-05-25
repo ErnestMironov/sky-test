@@ -1,11 +1,24 @@
 <template>
-  <yandex-map @click="setMarker" @map-was-initialized="mapInit" :coords="coords" :zoom="zoom">
-    <ymapMarker
-      @map-was-initialized="polygonInit"
-      ref="mkad"
-      marker-id="1"
-      marker-type="Polygon"
-      :coords="mkadCoords"
+  <yandex-map
+    :settings="settings"
+    @click="setMarker"
+    @map-was-initialized="mapInit"
+    :coords="coords"
+    :zoom="zoom"
+  >
+    <ymap-marker
+      v-if="autoRout"
+      :coords="autoRout"
+      :marker-stroke="autoRoutStyle"
+      marker-id="autoRout"
+      marker-type="Polyline"
+    />
+    <ymap-marker
+      v-if="planeRout"
+      :coords="planeRout"
+      :marker-stroke="planeRoutStyle"
+      marker-id="planeRout"
+      marker-type="Polyline"
     />
     <ymap-marker
       v-if="markerCoords"
@@ -17,7 +30,7 @@
 </template>
 
 <script>
-import { yandexMap, ymapMarker } from 'vue-yandex-maps';
+import { yandexMap, ymapMarker, loadYmap } from 'vue-yandex-maps';
 
 export default {
   name: 'Home',
@@ -25,9 +38,21 @@ export default {
   data() {
     return {
       coords: [55.76, 37.64],
+      autoRout: null,
+      autoRoutStyle: { color: '#000', width: 5 },
+      planeRout: null,
+      planeRoutStyle: { color: '#000', width: 5, style: 'dot' },
       zoom: 10,
       map: null,
+      mkad: null,
       markerCoords: null,
+      settings: {
+        apiKey: '2a51d234-e1e7-496f-9478-a9a99d9d9673',
+        lang: 'ru_RU',
+        coordorder: 'latlong',
+        version: '2.1'
+      },
+      ymaps: null,
       mkadCoords: [
         [
           [55.774543, 37.842663],
@@ -146,29 +171,50 @@ export default {
   methods: {
     mapInit(map) {
       this.map = map;
-    },
-    polygonInit(val) {
-      console.log(val);
+
+      this.mkad = new this.ymaps.Polygon(this.mkadCoords, {});
+
+      this.map.geoObjects.add(this.mkad);
     },
     setMarker(e) {
       this.markerCoords = e.get('coords');
     },
-    setRoad(point) {
-      // Расчет расстояния до адреса
-      const fromKm = this.$refs.mkad.getClosest(point); // Ближайшая точка МКАД к адресу
-      console.log(fromKm);
-      console.log(point);
-      // const router = new YMaps.Router([mkad_km[from_km.index][0] + 'км МКАД', addr]); // Строим маршрут от МКАД до адреса
-      // //Если путь найден
-      // YMaps.Events.observe(router, router.Events.Success, function() {
-      //   const distance = Math.ceil(router.getDistance() / 1000); // Получаем расстояние в км и округляем
-      // });
+    setRoad(points) {
+      const closest = this.mkad.geometry.getClosest(points).position;
+      this.planeRout = [points, closest];
+
+      this.ymaps
+        .route([points, closest], {
+          mapStateAutoApply: true
+        })
+        .then(
+          route => {
+            const routeCoords = [];
+
+            for (let i = 0; i < route.getPaths().getLength(); i += 1) {
+              const way = route.getPaths().get(i);
+              const segments = way.getSegments();
+              for (let j = 0; j < segments.length; j += 1) {
+                routeCoords.push(...segments[j].getCoordinates());
+              }
+            }
+
+            this.autoRout = routeCoords;
+          },
+          error => {
+            console.log(`Возникла ошибка: ${error.message}`);
+          }
+        );
     }
   },
   watch: {
     markerCoords(coords) {
       this.setRoad(coords);
     }
+  },
+  async mounted() {
+    await loadYmap(this.settings);
+    this.ymaps = window.ymaps;
   }
 };
 </script>
