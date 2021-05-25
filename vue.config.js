@@ -1,3 +1,5 @@
 module.exports = {
-    publicPath: '/sky-test/',
+  publicPath: '/sky-test/',
+
+  transpileDependencies: ['vuetify']
 };
