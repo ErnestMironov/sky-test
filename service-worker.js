@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/sky-test/precache-manifest.667356d4cfa36003b4164dc9220e86cc.js"
+  "/sky-test/precache-manifest.b5b924a4a6005e3f141d8d717977a041.js"
 );
 
 workbox.core.setCacheNameDetails({prefix: "sky-test"});
