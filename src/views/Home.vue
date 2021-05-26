@@ -16,20 +16,6 @@
     </v-snackbar>
 
     <ymap-marker
-      v-if="autoRout"
-      :coords="autoRout"
-      :marker-stroke="autoRoutStyle"
-      marker-id="autoRout"
-      marker-type="Polyline"
-    />
-    <ymap-marker
-      v-if="planeRout"
-      :coords="planeRout"
-      :marker-stroke="planeRoutStyle"
-      marker-id="planeRout"
-      marker-type="Polyline"
-    />
-    <ymap-marker
       v-if="markerCoords"
       :coords="markerCoords"
       marker-id="marker"
@@ -51,9 +37,7 @@ export default {
       snackbarMsg: '',
       coords: [55.76, 37.64],
       autoRout: null,
-      autoRoutStyle: { color: '#000', width: 5 },
       planeRout: null,
-      planeRoutStyle: { color: '#000', width: 5, style: 'dot' },
       zoom: 10,
       map: null,
       mkad: null,
@@ -85,11 +69,21 @@ export default {
     },
     setRoad(points) {
       this.snackbar = false;
-
+      const planeRoutStyle = {
+        strokeColor: '#000000',
+        strokeWidth: 4,
+        strokeStyle: 'dot'
+      };
       const closest = this.mkad.geometry.getClosest(points).position;
-      let autoRoutLength;
 
-      this.planeRout = [points, closest];
+      if (this.planeRout) this.map.geoObjects.remove(this.planeRout);
+      if (this.planeRout) this.map.geoObjects.remove(this.autoRout);
+
+      this.planeRout = new this.ymaps.Polyline([points, closest], {}, planeRoutStyle);
+      this.map.geoObjects.add(this.planeRout);
+
+      let autoRoutLength;
+      const planeRoutLength = (this.planeRout.geometry.getDistance() / 1000).toFixed(2);
 
       this.ymaps
         .route([points, closest], {
@@ -108,16 +102,23 @@ export default {
             }
 
             this.autoRout = routeCoords;
-            autoRoutLength = route.getLength();
+            this.autoRout = new this.ymaps.Polyline(
+              routeCoords,
+              {},
+              { strokeColor: '#000000', strokeWidth: 4 }
+            );
+            this.map.geoObjects.add(this.autoRout);
+            autoRoutLength = (this.autoRout.geometry.getDistance() / 1000).toFixed(2);
           },
           error => {
             console.log(`Возникла ошибка: ${error.message}`);
           }
         );
+
       this.ymaps.geocode(points).then(res => {
         this.snackbarMsg = `
-        ${res.geoObjects.get(0).properties.get('balloonContent')}<b>Расстоянние на автомобиле</b>:
-        ${(autoRoutLength / 1000).toFixed(2)}км`;
+        ${res.geoObjects.get(0).properties.get('balloonContent')}<b>Расстоянние на автомобиле:</b>
+        ${autoRoutLength}км<br /><b>Расстоянние по воздуху:</b>${planeRoutLength}км`;
       });
       this.snackbar = true;
     }
